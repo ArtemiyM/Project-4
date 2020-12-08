@@ -7,9 +7,11 @@ RF24 radio(9,10); // "создать" модуль на пинах 9 и 10 Дл�
 
 byte address[][6] = {"1Node","2Node","3Node","4Node","5Node","6Node"};  //возможные номера труб
 
-int count=0;
+int count=0, i=0;
+boolean condition = false, condition2 = false;
 String out_date;
-String code; 
+String code;
+String pre[8];
 
 void setup(){
   Serial.begin(9600); //открываем порт для связи с ПК
@@ -30,13 +32,34 @@ void setup(){
   radio.powerUp(); //начать работу
   radio.startListening();  //начинаем слушать эфир, мы приёмный модуль
   delay(3);
-  Serial.println("CELL,GET,E2");
-  count = Serial.readStringUntil(10).toInt() + 1;
-  if(count > 2){
-    Serial.println( (String)"ROW,SET," + count);
-  }else{
-    Serial.println( (String)"ROW,SET,2");
-  } 
+  Serial.println("CELL,GET,E2"); //смотрим кол-во строк
+  count = Serial.readStringUntil(10).toInt() + 1; //присваеваем это кол-во строк
+  Serial.println( (String)"ROW,SET," + count); //назначаем начало записи
+
+  delay(3);
+  Serial.println("CELL,GET,E4");
+  pre[0] = Serial.readStringUntil(10).toInt();
+  delay(3);
+  Serial.println("CELL,GET,E5");
+  pre[1] = Serial.readStringUntil(10).toInt();
+  delay(3);
+  Serial.println("CELL,GET,E6");
+  pre[2] = Serial.readStringUntil(10).toInt();
+  delay(3);
+  Serial.println("CELL,GET,E7");
+  pre[3] = Serial.readStringUntil(10).toInt();
+  delay(3);
+  Serial.println("CELL,GET,E8");
+  pre[4] = Serial.readStringUntil(10).toInt();
+  delay(3);
+  Serial.println("CELL,GET,E9");
+  pre[5] = Serial.readStringUntil(10).toInt();
+  delay(3);
+  Serial.println("CELL,GET,E10");
+  pre[6] = Serial.readStringUntil(10).toInt();
+  delay(3);
+  Serial.println("CELL,GET,E11");
+  pre[7] = Serial.readStringUntil(10).toInt();
 }
 
 void loop() {
@@ -44,30 +67,37 @@ void loop() {
     char gotByte;                      
     while( radio.available(&pipeNo)){    // слушаем эфир со всех труб
       radio.read( &gotByte, sizeof(gotByte) );         // чиатем входящий сигнал
-      
       if(gotByte != 19){
-//        Serial.print((char)gotByte);
-        code = code + (char)gotByte;
-      }else{
-//        Serial.println();
-//        Serial.println((String)"This code is String = " + code);
-        Serial.println( (String) "DATA,DATE,TIME," + code + ",AUTOSCROLL_20");
-        Serial.println( (String)"CELL,SET,E2," + count);
-        count++;
-        code = "";
+          code = code + (char)gotByte;
       }
+      
+      for(i=0;i<8;i++){
+        if(code == pre[i]){
+          condition = true;
+          condition2 = true;
+        }
+      }
+      
+      if(gotByte == 19){
+        if(condition == true){
+          Serial.print((String) "DATA," + code + ",");
+          condition = false;
+          code = "";
+        }else if(condition2 == true){
+          Serial.println((String)code);
+          Serial.println((String)"CELL,SET,E2," + count);
+          condition2 = false;
+          code = "";
+          count++;
+        }else{
+          Serial.print((String)"DATA," + ",");
+          Serial.println((String)code);
+          Serial.println((String)"CELL,SET,E2," + count);
+          code = "";
+          count++;
+        }
+     }
    }
-   
-   
-   /*
-    if(count == -20){
-      delay(3);
-      Serial.println("CELL,GET,A2");
-      out_date = Serial.readStringUntil(10);
-      Serial.println("PAUSELOGGING");
-      Serial.println( (String)"SAVEWORKBOOKAS, " + out_date);
-      Serial.println("FORCEEXCELQUIT");
-    }*/
 }
 
 
